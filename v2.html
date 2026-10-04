@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pizarra de tiza</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%9C%8F%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://unpkg.com/@excalidraw/excalidraw@0.18.1/dist/prod/index.css">
 <script>window.EXCALIDRAW_ASSET_PATH = "https://unpkg.com/@excalidraw/excalidraw@0.18.1/dist/prod/";</script>
 <script type="importmap">
@@ -121,11 +122,25 @@ function aElementos(d){
   return convertToExcalidrawElements(esq);
 }
 
+// ---- Medir los textos con la letra de tiza ya cargada ----
+// Excalidraw mide los textos al crearlos; si la letra aún no ha llegado, los mide con otra
+// más estrecha y luego se ven cortados. Al cargar la letra, se vuelven a medir.
+const lienzoMedida = document.createElement("canvas").getContext("2d");
+function medirTextos(elementos){
+  return elementos.map(e => {
+    if (e.type !== "text" || e.containerId || e.isDeleted) return e;
+    lienzoMedida.font = `${e.fontSize}px Excalifont, Xiaolai, Segoe UI Emoji`;
+    const ancho = Math.max(...String(e.text).split("\n").map(l => lienzoMedida.measureText(l).width));
+    if (!(ancho > e.width + 0.5)) return e;
+    return { ...e, width: ancho, version: e.version + 1, versionNonce: Math.floor(Math.random() * 2 ** 31) };
+  });
+}
+
 // ---- Cargar en el lienzo ----
 function cargarTexto(t){
   try {
     const d = JSON.parse(t);
-    const elementos = d.type === "excalidraw" ? d.elements : aElementos(d);
+    const elementos = medirTextos(d.type === "excalidraw" ? d.elements : aElementos(d));
     api.updateScene({ elements: elementos, appState: { viewBackgroundColor: FONDO } });
     api.scrollToContent(elementos, { fitToContent: true });
     aviso("Pizarra cargada");
@@ -205,7 +220,7 @@ const EJEMPLO = { titulo:"Lluvia de ideas", fecha:new Date().toISOString().slice
   { tipo:"tareas", nombre:"Tareas", items:[{ texto:"Probar con una foto real", color:"rosa", dia:"" }] },
   { tipo:"decisiones", nombre:"Decisiones", items:[{ texto:"Todo en local, sin subir la foto", color:"verde" }] },
   { tipo:"preguntas", nombre:"Dudas", items:[{ texto:"¿Qué colores para qué?", color:"naranja" }] } ],
-  dibujos:[ { type:"arrow", x:330, y:215, width:120, height:0, strokeColor:"#f7e27a" } ] };
+  dibujos:[ { type:"arrow", x:432, y:215, width:56, height:0, strokeColor:"#f7e27a" } ] };
 
 function inicial(){
   try { const g = localStorage.getItem(CLAVE); if (g) return JSON.parse(g); } catch {}
@@ -225,6 +240,11 @@ createRoot(document.getElementById("lienzo")).render(
       const encajar = () => { const caja = document.getElementById("lienzo");
         if (caja.clientWidth > 200 && caja.clientHeight > 200) api.scrollToContent(undefined, { fitToContent: true, minZoom: 0.4, maxZoom: 1 }); };
       setTimeout(encajar, 300);
+      // Cada vez que el navegador termina de cargar una letra, se vuelven a medir los textos.
+      const remedir = () => { const antes = api.getSceneElements(); const despues = medirTextos(antes);
+        if (despues.some((e, i) => e !== antes[i])) { api.updateScene({ elements: despues }); setTimeout(encajar, 100); } };
+      document.fonts.addEventListener("loadingdone", remedir);
+      document.fonts.ready.then(remedir);
       let ultimo = 0; window.addEventListener("resize", () => { clearTimeout(ultimo); ultimo = setTimeout(encajar, 300); });
       document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(encajar, 200); }); },
     initialData: { elements: inicial(), appState: { viewBackgroundColor: FONDO, currentItemStrokeColor: TIZAS.blanca, currentItemFontFamily: LETRA, currentItemRoughness: 1 }, scrollToContent: true },
