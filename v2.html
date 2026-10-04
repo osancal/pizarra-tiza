@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pizarra de tiza</title>
+<link rel="stylesheet" href="https://unpkg.com/@excalidraw/excalidraw@0.18.1/dist/prod/index.css">
+<script>window.EXCALIDRAW_ASSET_PATH = "https://unpkg.com/@excalidraw/excalidraw@0.18.1/dist/prod/";</script>
+<script type="importmap">
+{ "imports": {
+  "react": "https://esm.sh/react@19.3.0",
+  "react/": "https://esm.sh/react@19.3.0/",
+  "react-dom": "https://esm.sh/react-dom@19.3.0",
+  "react-dom/": "https://esm.sh/react-dom@19.3.0/",
+  "@excalidraw/excalidraw": "https://esm.sh/@excalidraw/excalidraw@0.18.1?external=react,react-dom"
+} }
+</script>
+<style>
+  :root{
+    --tiza-blanca:#f4f1e8; --tiza-amarilla:#f7e27a; --tiza-rosa:#f6a5c0;
+    --tiza-azul:#9fd3f5; --tiza-verde:#b6e59e; --tiza-naranja:#f7b267;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#121212;color:#eee;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+  body{display:flex;flex-direction:column}
+  .barra{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 14px;background:#1b1b1b;border-bottom:1px solid #333}
+  .barra h1{font:700 18px system-ui;margin:0 10px 0 0;color:var(--tiza-amarilla)}
+  .barra button,.barra label.boton{font:600 13px system-ui;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:8px;padding:6px 10px;cursor:pointer}
+  .barra button:hover,.barra label.boton:hover{border-color:var(--tiza-amarilla)}
+  .barra input[type=file]{display:none}
+  .tizas{display:flex;gap:6px;align-items:center;font-size:12px;color:#aaa}
+  .tizas button{width:26px;height:26px;border-radius:50%;padding:0;border:2px solid #444;background:var(--c)}
+  .tizas button[aria-pressed=true]{border-color:#fff;transform:scale(1.12)}
+  .espacio{flex:1}
+  .zona{flex:1;display:flex;min-height:0}
+  #lienzo{flex:1;min-width:0;height:100%}
+  .foto{width:min(32vw,420px);border-left:1px solid #333;background:#1b1b1b;padding:10px;overflow:auto}
+  .foto img{width:100%;border-radius:6px}
+  .foto p{font-size:12px;color:#aaa}
+  .aviso{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#2a2a2a;border:1px solid var(--tiza-amarilla);color:#eee;padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+  .aviso.ver{opacity:1}
+  dialog{background:#1e1e1e;color:#eee;border:1px solid #444;border-radius:10px;width:min(720px,92vw)}
+  dialog textarea{width:100%;height:50vh;background:#111;color:#eee;border:1px solid #444;border-radius:6px;font:13px ui-monospace,monospace}
+  #cargando{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:15px;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="barra">
+  <h1>✎ Pizarra de tiza</h1>
+  <button id="pegar">Pegar datos</button>
+  <label class="boton">Abrir (.json / .excalidraw)<input type="file" id="abrir" accept=".json,.excalidraw,application/json"></label>
+  <label class="boton">Foto original<input type="file" id="foto" accept="image/*"></label>
+  <span class="tizas" id="tizas">Tiza:</span>
+  <span class="espacio"></span>
+  <button id="exp-excalidraw">Guardar .excalidraw</button>
+  <button id="exp-png">Imagen .png</button>
+  <button id="exp-ideas">Fichas de ideas</button>
+  <button id="exp-ics">Agenda .ics</button>
+  <button id="exp-notas">Notas .md</button>
+</div>
+<div class="zona">
+  <div id="lienzo"></div>
+  <aside class="foto" id="panel-foto" hidden>
+    <img id="img-foto" alt="Foto original de la pizarra">
+    <p>Foto original (solo en tu navegador; no se sube a ningún sitio).</p>
+  </aside>
+</div>
+<div id="cargando">Cargando la pizarra…</div>
+<dialog id="dlg">
+  <p>Pega el JSON de la pizarra (el que genera Claude a partir de la foto) o un fichero .excalidraw:</p>
+  <textarea id="dlg-txt" spellcheck="false"></textarea>
+  <p style="text-align:right"><button id="dlg-ok">Cargar</button> <button id="dlg-no">Cancelar</button></p>
+</dialog>
+<div class="aviso" id="aviso"></div>
+
+<script type="module">
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { Excalidraw, convertToExcalidrawElements, serializeAsJSON, exportToBlob, FONT_FAMILY } from "@excalidraw/excalidraw";
+
+// ---- Tizas ----
+const TIZAS = { blanca:"#f4f1e8", amarilla:"#f7e27a", rosa:"#f6a5c0", azul:"#9fd3f5", verde:"#b6e59e", naranja:"#f7b267" };
+const SIGNIFICADO = { blanca:"normal", amarilla:"importante", rosa:"urgente", azul:"técnico", verde:"hecho / decidido", naranja:"pregunta / duda" };
+const FONDO = "#1f3b2c";
+const LETRA = FONT_FAMILY?.Excalifont ?? 5;
+const MARCA = { ideas:"💡", tareas:"☐", decisiones:"✔", notas:"•", preguntas:"?" };
+const CLAVE = "pizarra-tiza-v2";
+const colorDe = hex => Object.keys(TIZAS).find(k => TIZAS[k].toLowerCase() === String(hex).toLowerCase()) || "blanca";
+
+let api = null;
+const aviso = msg => { const a = document.getElementById("aviso"); a.textContent = msg; a.classList.add("ver"); clearTimeout(aviso.t); aviso.t = setTimeout(() => a.classList.remove("ver"), 2400); };
+
+// ---- Del JSON de la pizarra a elementos de Excalidraw ----
+// { titulo, fecha, secciones:[{tipo, nombre, items:[{texto,color,dia?,hecha?}]}], dibujos?:[esqueletos de Excalidraw] }
+function partir(texto, ancho = 34){
+  const palabras = String(texto).split(/\s+/); const lineas = []; let l = "";
+  for (const p of palabras){ if ((l + " " + p).trim().length > ancho && l){ lineas.push(l); l = p; } else l = (l + " " + p).trim(); }
+  if (l) lineas.push(l); return lineas.join("\n");
+}
+function aElementos(d){
+  if (!d || !Array.isArray(d.secciones)) throw new Error("Falta la lista 'secciones'.");
+  const esq = [];
+  const texto = (x, y, t, color, tam, extra = {}) => esq.push({ type:"text", x, y, text:t, fontSize:tam, fontFamily:LETRA, strokeColor:TIZAS[color] || TIZAS.blanca, ...extra });
+  texto(60, 30, String(d.titulo || "Pizarra"), "amarilla", 44, { customData:{ rol:"titulo" } });
+  if (d.fecha) texto(62, 92, String(d.fecha), "blanca", 20, { customData:{ rol:"fecha" } });
+  const COL = 440, Y0 = 150;
+  d.secciones.forEach((s, i) => {
+    const tipo = MARCA[s.tipo] ? s.tipo : "notas";
+    const x = 60 + (i % 3) * COL; let y = Y0 + Math.floor(i / 3) * 360;
+    texto(x, y, String(s.nombre || tipo), "blanca", 30, { customData:{ rol:"seccion", tipo } }); y += 50;
+    (s.items || []).forEach(it => {
+      const color = TIZAS[it.color] ? it.color : "blanca";
+      const marca = tipo === "tareas" ? (it.hecha ? "☑" : "☐") : MARCA[tipo];
+      const fecha = tipo === "tareas" && it.dia ? `  (${it.dia})` : "";
+      const t = partir(`${marca} ${it.texto || ""}${fecha}`);
+      texto(x, y, t, color, 22, { customData:{ rol:"item", tipo, dia: it.dia || "", hecha: !!it.hecha, texto: String(it.texto || "") } });
+      y += 34 * t.split("\n").length + 4;
+    });
+  });
+  if (Array.isArray(d.dibujos)) d.dibujos.forEach(e => esq.push({ strokeColor: TIZAS.blanca, ...e }));
+  return convertToExcalidrawElements(esq);
+}
+
+// ---- Cargar en el lienzo ----
+function cargarTexto(t){
+  try {
+    const d = JSON.parse(t);
+    const elementos = d.type === "excalidraw" ? d.elements : aElementos(d);
+    api.updateScene({ elements: elementos, appState: { viewBackgroundColor: FONDO } });
+    api.scrollToContent(elementos, { fitToContent: true });
+    aviso("Pizarra cargada");
+  } catch(e){ aviso("No se pudo cargar: " + e.message); }
+}
+
+// ---- Leer la pizarra para exportar ----
+function vivos(){ return api.getSceneElements().filter(e => !e.isDeleted); }
+function textos(){ return vivos().filter(e => e.type === "text").sort((a,b) => a.x - b.x || a.y - b.y); }
+function limpiar(t){ return String(t).replace(/^[💡☐☑✔•?]\s*/u, "").replace(/\s*\(\d{4}-\d{2}-\d{2}\)\s*$/, "").replace(/\n/g, " ").trim(); }
+function titulo(){ return limpiar(textos().find(e => e.customData?.rol === "titulo")?.text || "Pizarra"); }
+function fecha(){ return textos().find(e => e.customData?.rol === "fecha")?.text || new Date().toISOString().slice(0,10); }
+function items(tipo){
+  return textos().filter(e => e.customData?.rol === "item" && e.customData.tipo === tipo)
+    .map(e => { const t = e.text; const m = t.match(/\((\d{4}-\d{2}-\d{2})\)\s*$/);
+      return { texto: limpiar(t), color: colorDe(e.strokeColor), dia: m ? m[1] : (e.customData.dia || ""), hecha: /^☑/.test(t) }; })
+    .filter(i => i.texto);
+}
+function sueltos(enDiagrama){ return textos().filter(e => !e.customData?.rol && !!e.containerId === enDiagrama).map(e => ({ texto: limpiar(e.text), color: colorDe(e.strokeColor) })).filter(i => i.texto); }
+function base(){ return titulo().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "pizarra"; }
+function descargar(nombre, contenido, tipo){ const a = document.createElement("a");
+  a.href = URL.createObjectURL(contenido instanceof Blob ? contenido : new Blob([contenido], { type: tipo })); a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); }
+
+const acciones = {
+  "exp-excalidraw": () => descargar(base() + ".excalidraw", serializeAsJSON(vivos(), api.getAppState(), api.getFiles(), "local"), "application/json"),
+  "exp-png": async () => descargar(base() + ".png", await exportToBlob({ elements: vivos(), appState: { ...api.getAppState(), exportBackground: true, viewBackgroundColor: FONDO }, files: api.getFiles(), mimeType: "image/png" })),
+  "exp-ideas": () => {
+    const ideas = items("ideas"); if (!ideas.length) return aviso("No hay ideas en la pizarra");
+    descargar(base() + "-ideas.md", ideas.map(i => `---\ntipo: idea\nestado: idea\nprioridad: ${SIGNIFICADO[i.color]}\norigen: pizarra "${titulo()}" (${fecha()})\n---\n\n# ${i.texto}\n\n- **Qué es:** \n- **Qué problema resuelve:** \n- **Para quién:** \n- **Siguiente paso:** \n`).join("\n\n"), "text/markdown");
+  },
+  "exp-notas": () => {
+    let md = `# ${titulo()}\n\n_${fecha()}_\n`;
+    [["ideas","Ideas"],["tareas","Tareas"],["decisiones","Decisiones"],["notas","Notas"],["preguntas","Dudas"]].forEach(([tipo, nombre]) => {
+      const l = items(tipo); if (!l.length) return; md += `\n## ${nombre}\n\n`;
+      l.forEach(i => { md += `- ${tipo === "tareas" ? (i.hecha ? "[x] " : "[ ] ") : ""}${i.texto}${i.dia ? ` (📅 ${i.dia})` : ""}${i.color !== "blanca" ? ` _(${SIGNIFICADO[i.color]})_` : ""}\n`; }); });
+    const dg = sueltos(true); if (dg.length){ md += `\n## En los diagramas\n\n`; dg.forEach(i => md += `- ${i.texto}\n`); }
+    const s = sueltos(false); if (s.length){ md += `\n## Añadido a mano\n\n`; s.forEach(i => md += `- ${i.texto}\n`); }
+    descargar(base() + "-notas.md", md, "text/markdown");
+  },
+  "exp-ics": () => {
+    const t = items("tareas").filter(i => i.dia && !i.hecha); if (!t.length) return aviso("No hay tareas pendientes con fecha (AAAA-MM-DD)");
+    const esc = s => s.replace(/[\\;,]/g, m => "\\" + m);
+    const ahora = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+    const sig = d => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x.getUTCDate() + 1); return x.toISOString().slice(0,10).replace(/-/g,""); };
+    const ev = t.map((i, n) => ["BEGIN:VEVENT", `UID:${ahora}-${n}@pizarra-tiza`, `DTSTAMP:${ahora}`, `DTSTART;VALUE=DATE:${i.dia.replace(/-/g,"")}`,
+      `DTEND;VALUE=DATE:${sig(i.dia)}`, `SUMMARY:${esc(i.texto)}`, `DESCRIPTION:${esc("De la pizarra: " + titulo())}`, "END:VEVENT"].join("\r\n"));
+    descargar(base() + "-agenda.ics", ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//pizarra-tiza//ES", ...ev, "END:VCALENDAR"].join("\r\n"), "text/calendar");
+  }
+};
+Object.entries(acciones).forEach(([id, f]) => document.getElementById(id).addEventListener("click", () => api ? f() : aviso("La pizarra aún se está cargando")));
+
+// ---- Paleta de tizas: elige el color de lo que dibujes y recolorea lo seleccionado ----
+const cajaTizas = document.getElementById("tizas");
+Object.entries(TIZAS).forEach(([nombre, hex]) => {
+  const b = document.createElement("button"); b.title = `Tiza ${nombre} (${SIGNIFICADO[nombre]})`; b.style.setProperty("--c", hex); b.dataset.tiza = nombre;
+  b.addEventListener("click", () => {
+    if (!api) return; const sel = api.getAppState().selectedElementIds || {};
+    const elementos = api.getSceneElements().map(e => sel[e.id] ? { ...e, strokeColor: hex, version: e.version + 1, versionNonce: Math.floor(Math.random() * 2**31) } : e);
+    api.updateScene({ elements: elementos, appState: { currentItemStrokeColor: hex } });
+    cajaTizas.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  });
+  cajaTizas.append(b);
+});
+
+// ---- Pegar / abrir / foto ----
+const dlg = document.getElementById("dlg");
+document.getElementById("pegar").addEventListener("click", () => { document.getElementById("dlg-txt").value = ""; dlg.showModal(); });
+document.getElementById("dlg-ok").addEventListener("click", () => { cargarTexto(document.getElementById("dlg-txt").value); dlg.close(); });
+document.getElementById("dlg-no").addEventListener("click", () => dlg.close());
+document.getElementById("abrir").addEventListener("change", e => { const f = e.target.files[0]; if (f) f.text().then(cargarTexto); e.target.value = ""; });
+document.getElementById("foto").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return;
+  document.getElementById("img-foto").src = URL.createObjectURL(f); document.getElementById("panel-foto").hidden = false; });
+
+// ---- Arranque ----
+const EJEMPLO = { titulo:"Lluvia de ideas", fecha:new Date().toISOString().slice(0,10), secciones:[
+  { tipo:"ideas", nombre:"Ideas", items:[{ texto:"Pizarra de tiza: foto → datos", color:"amarilla" }, { texto:"Banco de ideas con fichas", color:"blanca" }] },
+  { tipo:"tareas", nombre:"Tareas", items:[{ texto:"Probar con una foto real", color:"rosa", dia:"" }] },
+  { tipo:"decisiones", nombre:"Decisiones", items:[{ texto:"Todo en local, sin subir la foto", color:"verde" }] },
+  { tipo:"preguntas", nombre:"Dudas", items:[{ texto:"¿Qué colores para qué?", color:"naranja" }] } ],
+  dibujos:[ { type:"arrow", x:330, y:215, width:120, height:0, strokeColor:"#f7e27a" } ] };
+
+function inicial(){
+  try { const g = localStorage.getItem(CLAVE); if (g) return JSON.parse(g); } catch {}
+  return aElementos(EJEMPLO);
+}
+let guardado = 0;
+function alCambiar(elementos){
+  clearTimeout(guardado);
+  guardado = setTimeout(() => { try { localStorage.setItem(CLAVE, JSON.stringify(elementos.filter(e => !e.isDeleted))); } catch {} }, 600);
+}
+
+createRoot(document.getElementById("lienzo")).render(
+  React.createElement(Excalidraw, {
+    excalidrawAPI: a => { api = a; window.__pizarra = { api, aElementos, items, sueltos }; document.getElementById("cargando").remove();
+      // Encajar toda la pizarra en la pantalla al abrir
+      // (con límites: si la ventana está oculta al abrir, no se queda en un zoom diminuto)
+      const encajar = () => { const caja = document.getElementById("lienzo");
+        if (caja.clientWidth > 200 && caja.clientHeight > 200) api.scrollToContent(undefined, { fitToContent: true, minZoom: 0.4, maxZoom: 1 }); };
+      setTimeout(encajar, 300);
+      let ultimo = 0; window.addEventListener("resize", () => { clearTimeout(ultimo); ultimo = setTimeout(encajar, 300); });
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) setTimeout(encajar, 200); }); },
+    initialData: { elements: inicial(), appState: { viewBackgroundColor: FONDO, currentItemStrokeColor: TIZAS.blanca, currentItemFontFamily: LETRA, currentItemRoughness: 1 }, scrollToContent: true },
+    onChange: alCambiar,
+    langCode: "es-ES",
+    UIOptions: { canvasActions: { changeViewBackgroundColor: true, toggleTheme: false } }
+  })
+);
+</script>
+</body>
+</html>

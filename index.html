@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pizarra de tiza</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cabin+Sketch:wght@400;700&family=Gloria+Hallelujah&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --madera:#6b4423; --madera-osc:#3f2614;
+    --pizarra:#1f3b2c; --pizarra-2:#18301f;
+    --barra:#121212; --texto-barra:#eaeaea;
+    /* Tizas */
+    --tiza-blanca:#f4f1e8; --tiza-amarilla:#f7e27a; --tiza-rosa:#f6a5c0;
+    --tiza-azul:#9fd3f5; --tiza-verde:#b6e59e; --tiza-naranja:#f7b267;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--barra);color:var(--texto-barra);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+
+  /* Barra de herramientas */
+  .barra{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 16px;background:#1b1b1b;border-bottom:1px solid #333;position:sticky;top:0;z-index:5}
+  .barra h1{font:700 20px "Cabin Sketch",cursive;margin:0 12px 0 0;color:var(--tiza-amarilla);letter-spacing:.5px}
+  .barra button,.barra label.boton{font:600 13px system-ui,sans-serif;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:8px;padding:7px 11px;cursor:pointer}
+  .barra button:hover,.barra label.boton:hover{border-color:var(--tiza-amarilla)}
+  .barra input[type=file]{display:none}
+  .espacio{flex:1}
+  .leyenda{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:#bbb}
+  .leyenda span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;background:var(--c);vertical-align:-1px}
+
+  /* Zona principal */
+  .zona{display:grid;grid-template-columns:1fr;gap:16px;padding:16px;max-width:1500px;margin:0 auto}
+  .zona.con-foto{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}
+  @media (max-width:900px){.zona.con-foto{grid-template-columns:1fr}}
+
+  /* La pizarra */
+  .marco{background:linear-gradient(135deg,var(--madera),var(--madera-osc));padding:16px;border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.6)}
+  .pizarra{position:relative;min-height:70vh;border-radius:4px;padding:28px 32px 60px;
+    background:
+      radial-gradient(ellipse at 20% 15%, rgba(255,255,255,.06), transparent 45%),
+      radial-gradient(ellipse at 80% 70%, rgba(255,255,255,.05), transparent 50%),
+      linear-gradient(160deg,var(--pizarra),var(--pizarra-2));
+    overflow:hidden}
+  /* Polvo de tiza */
+  .pizarra::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='300' height='300'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .25 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+  .repisa{position:absolute;left:0;right:0;bottom:0;height:22px;background:linear-gradient(var(--madera),var(--madera-osc))}
+  .repisa i{position:absolute;bottom:6px;width:46px;height:9px;border-radius:3px}
+
+  /* Texto de tiza: trazo irregular con un filtro SVG */
+  .tiza{filter:url(#tiza);text-shadow:0 0 1px currentColor,0 0 6px rgba(255,255,255,.12)}
+  .titulo{font:700 clamp(28px,4vw,46px) "Cabin Sketch",cursive;margin:0 0 6px;outline:none}
+  .fecha{font:500 18px "Caveat",cursive;opacity:.85;margin-bottom:18px}
+  .secciones{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px 34px;position:relative}
+  .seccion h2{font:700 26px "Cabin Sketch",cursive;margin:0 0 8px;display:flex;align-items:center;gap:10px}
+  .seccion h2 button{font:600 12px system-ui;background:transparent;color:#ddd;border:1px dashed #6a8;border-radius:6px;padding:2px 7px;cursor:pointer;filter:none;text-shadow:none}
+  ul{list-style:none;margin:0;padding:0}
+  li{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font:400 19px/1.35 "Gloria Hallelujah",cursive}
+  li .marca{flex:0 0 auto;margin-top:2px;cursor:pointer;user-select:none}
+  li .txt{flex:1;outline:none;min-width:0;overflow-wrap:anywhere}
+  li .txt:focus{background:rgba(255,255,255,.05);border-radius:4px}
+  li .dia{font:500 16px "Caveat",cursive;opacity:.9;white-space:nowrap;outline:none}
+  li .ctrl{display:none;gap:3px;flex:0 0 auto}
+  li:hover .ctrl,li:focus-within .ctrl{display:flex}
+  .ctrl button{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.4);cursor:pointer;padding:0;background:var(--c)}
+  .ctrl button.borrar{background:transparent;color:#ccc;border:none;width:auto;font:600 13px system-ui}
+  li.hecha .txt{text-decoration:line-through;opacity:.7}
+
+  /* Colores de tiza */
+  .c-blanca{color:var(--tiza-blanca)} .c-amarilla{color:var(--tiza-amarilla)} .c-rosa{color:var(--tiza-rosa)}
+  .c-azul{color:var(--tiza-azul)} .c-verde{color:var(--tiza-verde)} .c-naranja{color:var(--tiza-naranja)}
+
+  /* Foto original */
+  .foto{background:#1b1b1b;border:1px solid #333;border-radius:12px;padding:10px}
+  .foto img{width:100%;border-radius:6px;display:block}
+  .foto p{font-size:12px;color:#aaa;margin:8px 2px 0}
+
+  .aviso{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#2a2a2a;border:1px solid var(--tiza-amarilla);color:#eee;padding:8px 14px;border-radius:8px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .aviso.ver{opacity:1}
+  dialog{background:#1e1e1e;color:#eee;border:1px solid #444;border-radius:10px;width:min(720px,92vw)}
+  dialog textarea{width:100%;height:50vh;background:#111;color:#eee;border:1px solid #444;border-radius:6px;font:13px ui-monospace,monospace}
+</style>
+</head>
+<body>
+<!-- Filtro que da el borde irregular de la tiza -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="tiza">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" result="ruido"/>
+    <feDisplacementMap in="SourceGraphic" in2="ruido" scale="1.6"/>
+  </filter>
+</svg>
+
+<div class="barra">
+  <h1>✎ Pizarra de tiza</h1>
+  <label class="boton">Abrir pizarra (.json)<input type="file" id="abrir" accept=".json,application/json"></label>
+  <button id="pegar">Pegar datos</button>
+  <label class="boton">Foto original<input type="file" id="foto" accept="image/*"></label>
+  <span class="espacio"></span>
+  <button id="exp-json">Guardar .json</button>
+  <button id="exp-ideas">Fichas de ideas (.md)</button>
+  <button id="exp-ics">Agenda (.ics)</button>
+  <button id="exp-notas">Notas (.md)</button>
+</div>
+<div class="barra" style="position:static;padding-top:4px;padding-bottom:8px">
+  <div class="leyenda">
+    <span style="--c:var(--tiza-blanca)">Normal</span>
+    <span style="--c:var(--tiza-amarilla)">Importante</span>
+    <span style="--c:var(--tiza-rosa)">Urgente</span>
+    <span style="--c:var(--tiza-azul)">Técnico</span>
+    <span style="--c:var(--tiza-verde)">Hecho / decidido</span>
+    <span style="--c:var(--tiza-naranja)">Pregunta / duda</span>
+  </div>
+  <span class="espacio"></span>
+  <span style="font-size:12px;color:#999">Pasa el ratón por un renglón para cambiar su tiza o borrarlo. Haz clic en el texto para editarlo.</span>
+</div>
+
+<main class="zona" id="zona">
+  <div class="marco">
+    <div class="pizarra" id="pizarra">
+      <h1 class="titulo tiza c-amarilla" id="titulo" contenteditable="true" spellcheck="false"></h1>
+      <div class="fecha tiza c-blanca" id="fecha" contenteditable="true" spellcheck="false"></div>
+      <div class="secciones" id="secciones"></div>
+      <div class="repisa">
+        <i style="left:8%;background:var(--tiza-blanca)"></i><i style="left:16%;background:var(--tiza-amarilla)"></i>
+        <i style="left:24%;background:var(--tiza-rosa)"></i><i style="left:70%;background:var(--tiza-azul)"></i>
+        <i style="left:80%;background:var(--tiza-verde)"></i>
+      </div>
+    </div>
+  </div>
+  <aside class="foto" id="panel-foto" hidden>
+    <img id="img-foto" alt="Foto original de la pizarra">
+    <p>Foto original (solo en tu navegador; no se sube a ningún sitio).</p>
+  </aside>
+</main>
+
+<dialog id="dlg">
+  <p>Pega aquí el JSON de la pizarra (el que genera Claude a partir de la foto):</p>
+  <textarea id="dlg-txt" spellcheck="false"></textarea>
+  <p style="text-align:right"><button id="dlg-ok">Cargar</button> <button id="dlg-no">Cancelar</button></p>
+</dialog>
+<div class="aviso" id="aviso"></div>
+
+<script>
+"use strict";
+// ---- Modelo de datos ----
+// { titulo, fecha, secciones: [{ tipo: "ideas"|"tareas"|"decisiones"|"notas"|"preguntas", nombre, items: [{ texto, color, dia?, hecha? }] }] }
+const COLORES = ["blanca","amarilla","rosa","azul","verde","naranja"];
+const MARCA = { ideas:"💡", tareas:"☐", decisiones:"✔", notas:"•", preguntas:"?" };
+const CLAVE = "pizarra-tiza-v1";
+const EJEMPLO = {
+  titulo: "Lluvia de ideas",
+  fecha: new Date().toISOString().slice(0,10),
+  secciones: [
+    { tipo:"ideas", nombre:"Ideas", items:[
+      { texto:"Pizarra de tiza: foto → datos", color:"amarilla" },
+      { texto:"Banco de ideas con fichas", color:"blanca" } ]},
+    { tipo:"tareas", nombre:"Tareas", items:[
+      { texto:"Probar con una foto real", color:"rosa", dia:"" } ]},
+    { tipo:"decisiones", nombre:"Decisiones", items:[
+      { texto:"Todo en local, sin subir la foto", color:"verde" } ]},
+    { tipo:"preguntas", nombre:"Dudas", items:[
+      { texto:"¿Qué colores para qué?", color:"naranja" } ]}
+  ]
+};
+
+let datos = cargarLocal() || structuredClone(EJEMPLO);
+
+function cargarLocal(){ try { const t = localStorage.getItem(CLAVE); return t ? JSON.parse(t) : null; } catch { return null; } }
+function guardarLocal(){ try { localStorage.setItem(CLAVE, JSON.stringify(datos)); } catch {} }
+function aviso(msg){ const a=document.getElementById("aviso"); a.textContent=msg; a.classList.add("ver"); clearTimeout(aviso.t); aviso.t=setTimeout(()=>a.classList.remove("ver"),2200); }
+
+function validar(d){
+  if (!d || typeof d !== "object" || !Array.isArray(d.secciones)) throw new Error("Falta la lista 'secciones'.");
+  d.titulo = String(d.titulo || "Pizarra"); d.fecha = String(d.fecha || "");
+  d.secciones.forEach(s => {
+    if (!MARCA[s.tipo]) s.tipo = "notas";
+    s.nombre = String(s.nombre || s.tipo);
+    s.items = (Array.isArray(s.items) ? s.items : []).map(i => ({
+      texto: String(i.texto || ""), color: COLORES.includes(i.color) ? i.color : "blanca",
+      dia: i.dia ? String(i.dia) : "", hecha: !!i.hecha }));
+  });
+  return d;
+}
+
+// ---- Pintar ----
+function pintar(){
+  const tit = document.getElementById("titulo"), fec = document.getElementById("fecha");
+  tit.textContent = datos.titulo; fec.textContent = datos.fecha;
+  const cont = document.getElementById("secciones"); cont.innerHTML = "";
+  datos.secciones.forEach((s, si) => {
+    const sec = document.createElement("section"); sec.className = "seccion";
+    const h = document.createElement("h2"); h.className = "tiza c-blanca";
+    const nombre = document.createElement("span"); nombre.textContent = s.nombre; nombre.contentEditable = "true";
+    nombre.spellcheck = false; nombre.addEventListener("input", () => { s.nombre = nombre.textContent; guardarLocal(); });
+    const mas = document.createElement("button"); mas.textContent = "+ añadir";
+    mas.addEventListener("click", () => { s.items.push({ texto:"", color:"blanca", dia:"", hecha:false }); guardarLocal(); pintar();
+      const ult = cont.children[si].querySelectorAll(".txt"); ult[ult.length-1]?.focus(); });
+    h.append(nombre, mas); sec.append(h);
+    const ul = document.createElement("ul");
+    s.items.forEach((it, ii) => ul.append(renglon(s, it, ii)));
+    sec.append(ul); cont.append(sec);
+  });
+}
+
+function renglon(s, it, ii){
+  const li = document.createElement("li"); li.className = `tiza c-${it.color}` + (it.hecha ? " hecha" : "");
+  const marca = document.createElement("span"); marca.className = "marca";
+  marca.textContent = s.tipo === "tareas" ? (it.hecha ? "☑" : "☐") : MARCA[s.tipo];
+  if (s.tipo === "tareas") marca.addEventListener("click", () => { it.hecha = !it.hecha; guardarLocal(); pintar(); });
+  const txt = document.createElement("span"); txt.className = "txt"; txt.contentEditable = "true"; txt.spellcheck = false;
+  txt.textContent = it.texto; txt.addEventListener("input", () => { it.texto = txt.textContent; guardarLocal(); });
+  li.append(marca, txt);
+  if (s.tipo === "tareas") {
+    const dia = document.createElement("span"); dia.className = "dia"; dia.contentEditable = "true"; dia.spellcheck = false;
+    dia.title = "Fecha AAAA-MM-DD"; dia.textContent = it.dia || "📅 fecha";
+    dia.addEventListener("focus", () => { if (!it.dia) dia.textContent = ""; });
+    dia.addEventListener("blur", () => { const v = dia.textContent.trim(); it.dia = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : ""; if (v && !it.dia) aviso("La fecha debe ser AAAA-MM-DD"); guardarLocal(); pintar(); });
+    li.append(dia);
+  }
+  const ctrl = document.createElement("span"); ctrl.className = "ctrl";
+  COLORES.forEach(c => { const b = document.createElement("button"); b.style.setProperty("--c", `var(--tiza-${c})`); b.title = `Tiza ${c}`;
+    b.addEventListener("click", () => { it.color = c; guardarLocal(); pintar(); }); ctrl.append(b); });
+  const borrar = document.createElement("button"); borrar.className = "borrar"; borrar.textContent = "✕"; borrar.title = "Borrar";
+  borrar.addEventListener("click", () => { s.items.splice(ii, 1); guardarLocal(); pintar(); });
+  ctrl.append(borrar); li.append(ctrl);
+  return li;
+}
+
+document.getElementById("titulo").addEventListener("input", e => { datos.titulo = e.target.textContent; guardarLocal(); });
+document.getElementById("fecha").addEventListener("input", e => { datos.fecha = e.target.textContent; guardarLocal(); });
+
+// ---- Abrir / pegar ----
+function cargarTexto(t){ try { datos = validar(JSON.parse(t)); guardarLocal(); pintar(); aviso("Pizarra cargada"); } catch(e){ aviso("No se pudo cargar: " + e.message); } }
+document.getElementById("abrir").addEventListener("change", e => { const f = e.target.files[0]; if (f) f.text().then(cargarTexto); e.target.value = ""; });
+const dlg = document.getElementById("dlg");
+document.getElementById("pegar").addEventListener("click", () => { document.getElementById("dlg-txt").value = ""; dlg.showModal(); });
+document.getElementById("dlg-ok").addEventListener("click", () => { cargarTexto(document.getElementById("dlg-txt").value); dlg.close(); });
+document.getElementById("dlg-no").addEventListener("click", () => dlg.close());
+document.getElementById("foto").addEventListener("change", e => { const f = e.target.files[0]; if (!f) return;
+  document.getElementById("img-foto").src = URL.createObjectURL(f); document.getElementById("panel-foto").hidden = false;
+  document.getElementById("zona").classList.add("con-foto"); });
+
+// ---- Exportar ----
+function descargar(nombre, contenido, tipo){ const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([contenido], { type: tipo })); a.download = nombre; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
+function base(){ return (datos.titulo || "pizarra").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "pizarra"; }
+const SIGNIFICADO = { blanca:"normal", amarilla:"importante", rosa:"urgente", azul:"técnico", verde:"hecho / decidido", naranja:"pregunta / duda" };
+
+document.getElementById("exp-json").addEventListener("click", () => descargar(base()+".json", JSON.stringify(datos, null, 2), "application/json"));
+
+document.getElementById("exp-ideas").addEventListener("click", () => {
+  const ideas = datos.secciones.filter(s => s.tipo === "ideas").flatMap(s => s.items).filter(i => i.texto.trim());
+  if (!ideas.length) return aviso("No hay ideas en la pizarra");
+  const md = ideas.map(i => `---\ntipo: idea\nestado: idea\nprioridad: ${SIGNIFICADO[i.color]}\norigen: pizarra "${datos.titulo}" (${datos.fecha})\n---\n\n# ${i.texto.trim()}\n\n- **Qué es:** \n- **Qué problema resuelve:** \n- **Para quién:** \n- **Siguiente paso:** \n`).join("\n\n");
+  descargar(base()+"-ideas.md", md, "text/markdown");
+});
+
+document.getElementById("exp-notas").addEventListener("click", () => {
+  let md = `# ${datos.titulo}\n\n_${datos.fecha}_\n`;
+  datos.secciones.forEach(s => { md += `\n## ${s.nombre}\n\n`; s.items.filter(i => i.texto.trim()).forEach(i => {
+    const caja = s.tipo === "tareas" ? (i.hecha ? "[x] " : "[ ] ") : "";
+    md += `- ${caja}${i.texto.trim()}${i.dia ? ` (📅 ${i.dia})` : ""}${i.color !== "blanca" ? ` _(${SIGNIFICADO[i.color]})_` : ""}\n`; }); });
+  descargar(base()+"-notas.md", md, "text/markdown");
+});
+
+document.getElementById("exp-ics").addEventListener("click", () => {
+  const tareas = datos.secciones.filter(s => s.tipo === "tareas").flatMap(s => s.items).filter(i => i.dia && !i.hecha && i.texto.trim());
+  if (!tareas.length) return aviso("No hay tareas pendientes con fecha (AAAA-MM-DD)");
+  const esc = t => t.replace(/[\\;,]/g, m => "\\" + m).replace(/\n/g, "\\n");
+  const ahora = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const sig = d => { const x = new Date(d + "T00:00:00Z"); x.setUTCDate(x.getUTCDate()+1); return x.toISOString().slice(0,10).replace(/-/g,""); };
+  const ev = tareas.map((t, n) => ["BEGIN:VEVENT", `UID:${ahora}-${n}@pizarra-tiza`, `DTSTAMP:${ahora}`,
+    `DTSTART;VALUE=DATE:${t.dia.replace(/-/g,"")}`, `DTEND;VALUE=DATE:${sig(t.dia)}`,
+    `SUMMARY:${esc(t.texto.trim())}`, `DESCRIPTION:${esc("De la pizarra: " + datos.titulo)}`, "END:VEVENT"].join("\r\n"));
+  descargar(base()+"-agenda.ics", ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//pizarra-tiza//ES", ...ev, "END:VCALENDAR"].join("\r\n"), "text/calendar");
+});
+
+pintar();
+</script>
+</body>
+</html>
