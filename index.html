@@ -96,7 +96,7 @@
 <div class="barra">
   <h1>✎ Pizarra de tiza</h1>
   <label class="boton">Abrir pizarra (.json)<input type="file" id="abrir" accept=".json,application/json"></label>
-  <button id="pegar">Pegar datos</button>
+  <button id="pegar">Pegar texto o datos</button>
   <label class="boton">Foto original<input type="file" id="foto" accept="image/*"></label>
   <span class="espacio"></span>
   <button id="exp-json">Guardar .json</button>
@@ -137,12 +137,13 @@
 </main>
 
 <dialog id="dlg">
-  <p>Pega aquí el JSON de la pizarra (el que genera Claude a partir de la foto):</p>
+  <p>Pega el <strong>texto de tu pizarra</strong> (cópialo de la foto con Google Lens o Microsoft Lens) y la pizarra lo ordena sola. También vale el JSON de la pizarra.</p>
   <textarea id="dlg-txt" spellcheck="false"></textarea>
   <p style="text-align:right"><button id="dlg-ok">Cargar</button> <button id="dlg-no">Cancelar</button></p>
 </dialog>
 <div class="aviso" id="aviso"></div>
 
+<script src="leer-texto.js"></script>
 <script>
 "use strict";
 // ---- Modelo de datos ----
@@ -233,7 +234,7 @@ document.getElementById("titulo").addEventListener("input", e => { datos.titulo 
 document.getElementById("fecha").addEventListener("input", e => { datos.fecha = e.target.textContent; guardarLocal(); });
 
 // ---- Abrir / pegar ----
-function cargarTexto(t){ try { datos = validar(JSON.parse(t)); guardarLocal(); pintar(); aviso("Pizarra cargada"); } catch(e){ aviso("No se pudo cargar: " + e.message); } }
+function cargarTexto(t){ try { datos = validar(/^\s*[{[]/.test(t) ? JSON.parse(t) : PizarraTexto.leerTexto(t)); guardarLocal(); pintar(); aviso("Pizarra cargada"); } catch(e){ aviso("No se pudo cargar: " + e.message); } }
 document.getElementById("abrir").addEventListener("change", e => { const f = e.target.files[0]; if (f) f.text().then(cargarTexto); e.target.value = ""; });
 const dlg = document.getElementById("dlg");
 document.getElementById("pegar").addEventListener("click", () => { document.getElementById("dlg-txt").value = ""; dlg.showModal(); });

@@ -48,7 +48,7 @@
 <body>
 <div class="barra">
   <h1>✎ Pizarra de tiza</h1>
-  <button id="pegar">Pegar datos</button>
+  <button id="pegar">Pegar texto o datos</button>
   <label class="boton">Abrir (.json / .excalidraw)<input type="file" id="abrir" accept=".json,.excalidraw,application/json"></label>
   <label class="boton">Foto original<input type="file" id="foto" accept="image/*"></label>
   <span class="tizas" id="tizas">Tiza:</span>
@@ -68,12 +68,13 @@
 </div>
 <div id="cargando">Cargando la pizarra…</div>
 <dialog id="dlg">
-  <p>Pega el JSON de la pizarra (el que genera Claude a partir de la foto) o un fichero .excalidraw:</p>
+  <p>Pega el <strong>texto de tu pizarra</strong> (cópialo de la foto con Google Lens o Microsoft Lens) y la pizarra lo ordena sola. También vale el JSON de la pizarra o un fichero .excalidraw.</p>
   <textarea id="dlg-txt" spellcheck="false"></textarea>
   <p style="text-align:right"><button id="dlg-ok">Cargar</button> <button id="dlg-no">Cancelar</button></p>
 </dialog>
 <div class="aviso" id="aviso"></div>
 
+<script src="leer-texto.js"></script>
 <script type="module">
 import React from "react";
 import { createRoot } from "react-dom/client";
@@ -139,7 +140,7 @@ function medirTextos(elementos){
 // ---- Cargar en el lienzo ----
 function cargarTexto(t){
   try {
-    const d = JSON.parse(t);
+    const d = /^\s*[{[]/.test(t) ? JSON.parse(t) : PizarraTexto.leerTexto(t);
     const elementos = medirTextos(d.type === "excalidraw" ? d.elements : aElementos(d));
     api.updateScene({ elements: elementos, appState: { viewBackgroundColor: FONDO } });
     api.scrollToContent(elementos, { fitToContent: true });

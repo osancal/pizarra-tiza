@@ -5,7 +5,7 @@ Haz una foto a tu pizarra y tenla en digital con aspecto de tiza: texto editable
 ## Descárgala y empieza
 1. Pulsa el botón verde **Code** de esta página y elige **Download ZIP**.
 2. Descomprime el archivo.
-3. Haz doble clic en **`v2.html`**. Se abre en tu navegador y ya está.
+3. Haz doble clic en **`v2.html`**. Se abre en tu navegador y ya está. (Deja `leer-texto.js` en la misma carpeta: es el que ordena el texto.)
 
 
 > **Dos versiones:**
@@ -26,15 +26,40 @@ Haces una foto a tu pizarra y la tienes **en digital con aspecto de tiza**: text
 
 ## Cómo se usa
 1. Haz la foto de la pizarra (mejor con el modo "Pizarra" de Microsoft Lens).
-2. Pásasela a Claude con este encargo: *"Lee esta pizarra y devuélveme el JSON para Pizarra de tiza"* (formato abajo).
-3. Abre `v2.html` (o `index.html`), pulsa **Pegar datos** y pega el JSON. Con **Foto original** puedes verla al lado para comparar.
+2. **Copia el texto de la foto** con el móvil: en **Google Lens** (o la cámara de Android), toca *Texto* → *Seleccionar todo* → *Copiar*; en **Microsoft Lens**, elige *Texto* al guardar y copia lo que lee. Los dos leen bien la letra a mano.
+3. Abre `v2.html` (o `index.html`), pulsa **Pegar texto o datos** y pega. La pizarra **ordena el texto sola** (reglas abajo). Con **Foto original** puedes ver la foto al lado para comparar.
 4. Retoca lo que quieras: haz clic en el texto para editarlo y pasa el ratón por un renglón para cambiar su tiza o borrarlo.
 5. Exporta: **Fichas de ideas (.md)** para el banco de ideas, **Agenda (.ics)** para Google Calendar u Outlook (tareas pendientes con fecha) y **Notas (.md)** para las notas del proyecto. **Guardar .json** guarda la pizarra para abrirla otro día.
+
+Todo pasa en tu navegador: ni la foto ni el texto se suben a ningún sitio, y no hace falta ninguna IA.
+
+## Cómo ordena el texto
+- La **primera línea** es el título.
+- Una línea como **Ideas**, **Tareas**, **Pendiente**, **Decisiones**, **Notas** o **Dudas** (con o sin `:`) abre esa sección. Cualquier otra línea corta acabada en `:` abre una sección de notas con ese nombre.
+- Sin sección abierta: con `?` es una **duda**; con una **fecha** o casilla `[ ]` / `[x]` es una **tarea**; con `✓` o `hecho:` es una **decisión**; lo demás es una **idea**.
+- Una casilla o un `✓` mandan siempre, aunque estén debajo de otra sección.
+- Tizas: `urgente:` o `!` al final = **rosa**; `importante:` o viñeta `*` = **amarilla**; dudas = **naranja**; decisiones = **verde**.
+- Fechas: `10/10`, `3-11-2027`, `3.11.27` o `2026-12-01`. Sin año, se entiende este año (o el siguiente si ya pasó hace más de dos meses).
+
+Ejemplo que puedes pegar tal cual:
+```
+Reunión del lunes
+Ideas:
+- Banco de ideas compartido
+* App de recetas
+Tareas:
+[ ] Enviar presupuesto 10/10
+Llamar a Ana urgente!
+¿Quién paga el local?
+✓ Lo hacemos en Python
+```
 
 ## Colores de tiza
 blanca = normal · amarilla = importante · rosa = urgente · azul = técnico · verde = hecho o decidido · naranja = pregunta o duda.
 
-## Formato (JSON)
+## Formato (JSON), para usos avanzados
+También puedes pegar directamente este JSON, por ejemplo si se lo pides a un asistente de IA o lo genera otro programa.
+
 ```json
 {
   "titulo": "Nombre de la pizarra",
@@ -51,7 +76,7 @@ blanca = normal · amarilla = importante · rosa = urgente · azul = técnico ·
 Tipos válidos: `ideas`, `tareas`, `decisiones`, `notas`, `preguntas`. Colores: `blanca`, `amarilla`, `rosa`, `azul`, `verde`, `naranja`. Fechas en formato AAAA-MM-DD.
 
 ## Ideas para siguientes versiones
-- Leer la foto directamente en el navegador, sin pasarla por un asistente.
+- Botón **Leer foto**: leer la foto directamente en el navegador (Tesseract.js), sin copiar el texto a mano. Funciona bien con letra clara; con letra a mano rápida, Lens lee mejor.
 
 ## Licencia
 MIT: úsala, cópiala y modifícala libremente. Ver `LICENSE`.
