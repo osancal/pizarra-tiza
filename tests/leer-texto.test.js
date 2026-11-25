@@ -1,4 +1,4 @@
-// Pruebas del lector de texto: node --test tests/
+// Pruebas del lector de texto: node --test (desde la raíz del proyecto)
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const { leerTexto } = require("../leer-texto.js");

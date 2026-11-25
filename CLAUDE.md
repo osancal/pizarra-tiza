@@ -13,7 +13,7 @@ Programamos al estilo **Programación Extrema (XP)**. Antes de escribir o cambia
 
 ## Este proyecto
 - Web estática sin build: `v2.html` (recomendada, sobre Excalidraw), `index.html` (v1) y `leer-texto.js` (lógica que ordena el texto pegado; es la parte con tests).
-- **Tests**: `node --test tests/` (tardan menos de un segundo; ejecútalos tras cada cambio).
+- **Tests**: `node --test` desde la raíz (encuentra `tests/*.test.js`; tarda menos de un segundo). Ejecútalos tras cada cambio. Ojo: `node --test tests/` falla en Node 22.
 - La lógica nueva va en módulos testeables con Node (como `leer-texto.js`), no metida dentro del HTML.
 - Para cambios visuales en los HTML, compruébalos en el navegador (Playwright/Chromium) y no solo leyendo el código.
 - El usuario escribe en español; el código, los mensajes y los commits también van en español.
