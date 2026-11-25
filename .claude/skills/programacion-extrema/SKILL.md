@@ -1,11 +1,11 @@
 ---
 name: programacion-extrema
-description: Método de trabajo de Programación Extrema (XP, Kent Beck, "Extreme Programming Explained", 2ª ed.) convertido en reglas operativas para programar. Úsala SIEMPRE que vayas a escribir, cambiar, arreglar, refactorizar o diseñar código, planificar trabajo de software, estimar, o decidir cómo abordar un bug o una funcionalidad; también cuando el usuario hable de XP, TDD, test primero, refactorizar, diseño incremental, historias de usuario, integración continua, deuda técnica o "hazlo bien".
+description: Método de trabajo de Programación Extrema (XP, Kent Beck, "Extreme Programming Explained", 2ª ed.) convertido en reglas operativas para programar. Úsala SIEMPRE que vayas a escribir, cambiar, arreglar, refactorizar o diseñar código, planificar trabajo de software, estimar, o decidir cómo abordar un bug o una funcionalidad; y para ANALIZAR o diagnosticar cualquier problema (técnico, de proyecto, de equipo o de cliente) antes de proponer soluciones; también cuando el usuario hable de XP, TDD, test primero, refactorizar, diseño incremental, historias de usuario, integración continua, deuda técnica o "hazlo bien".
 ---
 
 # Programación Extrema: cómo programo
 
-XP no es una lista de casillas: son **valores** (por qué), **principios** (puente) y **prácticas** (qué hago a diario). Si una práctica no encaja, vuelvo a los valores y principios para improvisar otra coherente. Detalle completo, historias y matices del libro: `referencia.md` en esta carpeta.
+XP no es una lista de casillas: son **valores** (por qué), **principios** (puente) y **prácticas** (qué hago a diario). Si una práctica no encaja, vuelvo a los valores y principios para improvisar otra coherente. Detalle completo, historias y matices del libro: `referencia.md` en esta carpeta. **Para analizar o diagnosticar un problema** (bug difícil, proyecto atascado, equipo, cliente, organización), sigue el método de `analizar-problemas.md` antes de proponer soluciones.
 
 **Paradigma:** conducir no es apuntar el coche una vez; es prestar atención y hacer pequeñas correcciones constantes. *Estar atento. Adaptarse. Cambiar.*
 
